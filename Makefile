@@ -6,7 +6,7 @@
 #    By: rbourgea <rbourgea@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/04/24 16:00:27 by rbourgea          #+#    #+#              #
-#    Updated: 2022/06/09 13:52:28 by rbourgea         ###   ########.fr        #
+#    Updated: 2022/06/10 15:22:37 by rbourgea         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -28,14 +28,21 @@ RESET   	=	\033[0m
 # 💾 VARIABLES
 # **************************************************************************** #
 
-NAME		=	rbourgea_kernel
-CC = i686-elf-gcc
-CFLAGS = -Wall -Wextra -ffreestanding -O2 -I. -I./libk
-LFLAGS = -nodefaultlibs -nostdlib
-SRC_NAME = 
-OBJS = $(SRCS:.c=.o)
-SRC			=	$(addprefix $(SRC_PATH), $(SRC_NAME))
-OBJ			=	$(addprefix $(OBJ_PATH), $(OBJ_NAME))
+NAME		=	rbourgea_kfs.bin
+ISO		=	rbourgea_kfs.iso
+CC		=	i686-elf-gcc
+CFLAGS		=	-Wall -Wextra -ffreestanding -O2 -I./src #-I./klibft
+LFLAGS		=	-nodefaultlibs -nostdlib
+SRCS		=	src/kernel.c \
+			# klibft/memset.c \
+			# klibft/memcpy.c \
+			# klibft/memcmp.c \
+			# klibft/strlen.c \
+			# klibft/putchar.c \
+			# libk/printf.c
+OBJS		=	$(SRCS:.c=.o)
+ASM_SRCS	=	src/boot.s
+ASM_OBJS	=	$(ASM_SRCS:.s=.o)
 
 # **************************************************************************** #
 # 📖 RULES
@@ -44,43 +51,38 @@ OBJ			=	$(addprefix $(OBJ_PATH), $(OBJ_NAME))
 all: $(NAME)
 
 iso: $(NAME)
-	@cp $(NAME) iso/boot/$(NAME)
-	@grub-mkrescue -o kfs.iso iso
-	@echo "$(BOLD)$(CYAN)[✓] $(NAME) READY$(RESET)"
+	@cp $(NAME) boot/
+	@grub-mkrescue -o $(ISO) iso
+	@echo "$(BOLD)$(CYAN)[✓] $(ISO) READY$(RESET)"
 
-$(NAME): $(OBJS) linker.ld boot.o
+$(NAME): $(ASM_OBJS) $(OBJS) linker.ld
 	@echo -n ' DONE'
 	@echo "$(RESET)\n$(BOLD)$(GREEN)[✓] GENERATE OBJS DONE$(RESET)"
-	@$(CC) -T linker.ld -o $@ $(CFLAGS) $(LFLAGS) boot.o $(OBJS) -lgcc
+	@$(CC) -T linker.ld -o $@ $(CFLAGS) $(LFLAGS) $(ASM_OBJS) $(OBJS) -lgcc
 	@echo "$(BOLD)$(GREEN)[✓] $(NAME) BUILD DONE$(RESET)"
 
-$(OBJ_PATH):
-	@mkdir $(OBJ_PATH) 2> /dev/null || true
-	@echo "$(BOLD)$(MAGENTA)"
-	@clear
-	@echo -n ' [☛] Building: '
+# $(OBJS):
+# 	@echo "$(BOLD)$(MAGENTA)"
+# 	@clear
+# 	@echo -n ' [☛] Building: '
 
-$(OBJS)%.o: $(SRCS)%.c
-	@$(CC) $(FLAGS) $(INC) -o $@ -c $<
-	@echo -n '#'
+# $(OBJS)%.o: $(SRCS)%.c
+# 	@$(CC) $(FLAGS) $(INC) -o $@ -c $<
+# 	@echo -n '#'
 
-boot.o: boot.s
-	@i686-elf-as boot.s -o boot.o
+$(ASM_OBJS): $(ASM_SRCS)
+	i686-elf-as $< -o $@
 
 clean:
-	@rm -rf boot.o $(OBJS)
+	@rm -rf $(ASM_OBJS) $(OBJS)
 	@echo "$(BOLD)$(RED)[♻︎] DELETE OBJS DONE$(RESET)"
 
 fclean: clean
-	@$(RM) $(NAME)
-	@$(RM) iso/boot/$(NAME)
-	@$(RM) kfs.iso
+	@rm -rf $(NAME)
+	@rm -rf boot/$(NAME)
+	@rm -rf $(ISO)
 	@echo "$(BOLD)$(RED)[♻︎] DELETE BINARY FILES DONE$(RESET)"
 
 re: fclean all
-
-$(ASM_SRC_NAME)%.o: $(ASM_OBJ_NAME)%.s
-	@$(ASM) -o $@ -s $<
-	@echo "compiling boot.s"
 
 .PHONY: all clean fclean re iso
