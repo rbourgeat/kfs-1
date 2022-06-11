@@ -29,8 +29,8 @@ RESET   	=	\033[0m
 # **************************************************************************** #
 
 NAME		=	rbourgea_kfs.bin
-ISO		=	rbourgea_kfs.iso
-CC		=	i686-elf-gcc
+ISO			=	rbourgea_kfs.iso
+CC			=	i386-elf-gcc # i686-elf-gcc
 CFLAGS		=	-Wall -Wextra -ffreestanding -O2 -I./src #-I./klibft
 LFLAGS		=	-nodefaultlibs -nostdlib
 SRCS		=	src/kernel.c \
@@ -71,7 +71,8 @@ $(NAME): $(ASM_OBJS) $(OBJS) linker.ld
 # 	@echo -n '#'
 
 $(ASM_OBJS): $(ASM_SRCS)
-	i686-elf-as $< -o $@
+	i386-elf-as $< -o $@
+# i686-elf-as $< -o $@
 
 clean:
 	@rm -rf $(ASM_OBJS) $(OBJS)
