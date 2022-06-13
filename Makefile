@@ -33,7 +33,8 @@ ISO			=	rbourgea_kfs.iso
 
 CPATH		=	/home/user42/Bureau/i386-elf-7.5.0-Linux-x86_64/bin/
 CC			=	$(CPATH)i386-elf-gcc
-CFLAGS		=	-Wall -Wextra -ffreestanding -O2 -I./src
+SFLAGS		=	-fno-builtin -fno-exceptions -fno-stack-protector -nostdlib -nodefaultlibs
+CFLAGS		=	-Wall -Wextra -ffreestanding $(SFLAGS) -O2 -I./src
 LFLAGS		=	-nodefaultlibs -nostdlib
 
 SRCS		=	src/kernel.c
