@@ -30,16 +30,13 @@ RESET   	=	\033[0m
 
 NAME		=	rbourgea_kfs.bin
 ISO			=	rbourgea_kfs.iso
-CC			=	i386-elf-gcc # i686-elf-gcc
-CFLAGS		=	-Wall -Wextra -ffreestanding -O2 -I./src #-I./klibft
+
+CPATH		=	/home/user42/Bureau/i386-elf-7.5.0-Linux-x86_64/bin/
+CC			=	$(CPATH)i386-elf-gcc
+CFLAGS		=	-Wall -Wextra -ffreestanding -O2 -I./src
 LFLAGS		=	-nodefaultlibs -nostdlib
-SRCS		=	src/kernel.c \
-			# klibft/memset.c \
-			# klibft/memcpy.c \
-			# klibft/memcmp.c \
-			# klibft/strlen.c \
-			# klibft/putchar.c \
-			# libk/printf.c
+
+SRCS		=	src/kernel.c
 OBJS		=	$(SRCS:.c=.o)
 ASM_SRCS	=	src/boot.s
 ASM_OBJS	=	$(ASM_SRCS:.s=.o)
@@ -50,16 +47,16 @@ ASM_OBJS	=	$(ASM_SRCS:.s=.o)
 
 all: $(NAME)
 
-iso: $(NAME)
-	@cp $(NAME) boot/
-	@grub-mkrescue -o $(ISO) iso
-	@echo "$(BOLD)$(CYAN)[✓] $(ISO) READY$(RESET)"
-
 $(NAME): $(ASM_OBJS) $(OBJS) linker.ld
 	@echo -n ' DONE'
 	@echo "$(RESET)\n$(BOLD)$(GREEN)[✓] GENERATE OBJS DONE$(RESET)"
 	@$(CC) -T linker.ld -o $@ $(CFLAGS) $(LFLAGS) $(ASM_OBJS) $(OBJS) -lgcc
 	@echo "$(BOLD)$(GREEN)[✓] $(NAME) BUILD DONE$(RESET)"
+	@cp $(NAME) boot/
+	@grub-mkrescue -o $(ISO) .
+	@echo "$(BOLD)$(GREEN)[✓] $(ISO) READY$(RESET)"
+	@qemu-system-i386 -cdrom rbourgea_kfs.iso
+	@echo "$(BOLD)$(CYAN)[✓] BOOT DONE$(RESET)"
 
 # $(OBJS):
 # 	@echo "$(BOLD)$(MAGENTA)"
@@ -71,8 +68,7 @@ $(NAME): $(ASM_OBJS) $(OBJS) linker.ld
 # 	@echo -n '#'
 
 $(ASM_OBJS): $(ASM_SRCS)
-	i386-elf-as $< -o $@
-# i686-elf-as $< -o $@
+	$(CPATH)i386-elf-as $< -o $@
 
 clean:
 	@rm -rf $(ASM_OBJS) $(OBJS)
@@ -86,4 +82,4 @@ fclean: clean
 
 re: fclean all
 
-.PHONY: all clean fclean re iso
+.PHONY: all clean fclean re
