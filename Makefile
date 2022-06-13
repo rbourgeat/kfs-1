@@ -48,27 +48,19 @@ ASM_OBJS	=	$(ASM_SRCS:.s=.o)
 all: $(NAME)
 
 $(NAME): $(ASM_OBJS) $(OBJS) linker.ld
-	@echo -n ' DONE'
-	@echo "$(RESET)\n$(BOLD)$(GREEN)[✓] GENERATE OBJS DONE$(RESET)"
+	@echo -n "$(RESET)\n$(BOLD)$(GREEN)[✓] GENERATE OBJS DONE$(RESET)"
 	@$(CC) -T linker.ld -o $@ $(CFLAGS) $(LFLAGS) $(ASM_OBJS) $(OBJS) -lgcc
-	@echo "$(BOLD)$(GREEN)[✓] $(NAME) BUILD DONE$(RESET)"
+	@echo "$(BOLD)$(GREEN)[✓] $(NAME) LINK DONE$(RESET)"
 	@cp $(NAME) boot/
-	@grub-mkrescue -o $(ISO) .
+	@grub-mkrescue -o $(ISO) . 2> /dev/null
 	@echo "$(BOLD)$(GREEN)[✓] $(ISO) READY$(RESET)"
 	@qemu-system-i386 -cdrom rbourgea_kfs.iso
 	@echo "$(BOLD)$(CYAN)[✓] BOOT DONE$(RESET)"
 
-# $(OBJS):
-# 	@echo "$(BOLD)$(MAGENTA)"
-# 	@clear
-# 	@echo -n ' [☛] Building: '
-
-# $(OBJS)%.o: $(SRCS)%.c
-# 	@$(CC) $(FLAGS) $(INC) -o $@ -c $<
-# 	@echo -n '#'
-
 $(ASM_OBJS): $(ASM_SRCS)
-	$(CPATH)i386-elf-as $< -o $@
+	@clear
+	@$(CPATH)i386-elf-as $< -o $@
+	@echo "$(BOLD)$(GREEN)[✓] $(NAME) BUILD boot.s DONE$(RESET)"
 
 clean:
 	@rm -rf $(ASM_OBJS) $(OBJS)
