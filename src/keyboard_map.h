@@ -3,49 +3,84 @@
 /*                                                        :::      ::::::::   */
 /*   keyboard_map.h                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: user42 <user42@student.42.fr>              +#+  +:+       +#+        */
+/*   By: rbourgea <rbourgea@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2022/06/13 18:58:34 by user42            #+#    #+#             */
-/*   Updated: 2022/06/13 18:58:36 by user42           ###   ########.fr       */
+/*   Created: 2022/06/16 16:28:32 by rbourgea          #+#    #+#             */
+/*   Updated: 2022/06/16 16:28:33 by rbourgea         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-unsigned char keyboard_map[128] =
-{
-    0,  27, '1', '2', '3', '4', '5', '6', '7', '8',	/* 9 */
-  '9', '0', '-', '=', '\b',	/* Backspace */
-  '\t',			/* Tab */
-  'q', 'w', 'e', 'r',	/* 19 */
-  't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\n',	/* Enter key */
-    0,			/* 29   - Control */
-  'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';',	/* 39 */
- '\'', '`',   0,		/* Left shift */
- '\\', 'z', 'x', 'c', 'v', 'b', 'n',			/* 49 */
-  'm', ',', '.', '/',   0,				/* Right shift */
-  '*',
-    0,	/* Alt */
-  ' ',	/* Space bar */
-    0,	/* Caps lock */
-    0,	/* 59 - F1 key ... > */
-    0,   0,   0,   0,   0,   0,   0,   0,
-    0,	/* < ... F10 */
-    0,	/* 69 - Num lock*/
-    0,	/* Scroll Lock */
-    0,	/* Home key */
-    0,	/* Up Arrow */
-    0,	/* Page Up */
-  '-',
-    0,	/* Left Arrow */
-    0,
-    0,	/* Right Arrow */
-  '+',
-    0,	/* 79 - End key*/
-    0,	/* Down Arrow */
-    0,	/* Page Down */
-    0,	/* Insert Key */
-    0,	/* Delete Key */
-    0,   0,   0,
-    0,	/* F11 Key */
-    0,	/* F12 Key */
-    0,	/* All other keys are undefined */
+unsigned char keyboard_map[128] = {
+  // -------- 0 to 9 --------
+  ' ',
+  ' ', // escape key
+  '1','2','3','4','5','6','7','8',
+  // -------- 10 to 19 --------
+  '9','0','-','=',
+  ' ', // Backspace
+  ' ', // Tab
+  'q','w','e','r',
+  // -------- 20 to 29 --------
+  't','y','u','i','o','p','[',']',
+  ' ', // Enter
+  ' ', // left Ctrl
+  // -------- 30 to 39 --------
+  'a','s','d','f','g','h','j','k','l',';',
+  // -------- 40 to 49 --------
+  ' ','`',
+  ' ', // left Shift
+  ' ','z','x','c','v','b','n',
+  // -------- 50 to 59 --------
+  'm',',','.',
+  '/', // slash, or numpad slash if preceded by keycode 224
+  ' ', // right Shift
+  '*', // numpad asterisk
+  ' ', // left Alt
+  ' ', // Spacebar
+  ' ',
+  ' ', // F1
+  // -------- 60 to 69 --------
+  ' ', // F2
+  ' ', // F3
+  ' ', // F4
+  ' ', // F5
+  ' ', // F6
+  ' ', // F7
+  ' ', // F8
+  ' ', // F9
+  ' ', // F10
+  ' ',
+  // -------- 70 to 79 --------
+  ' ', // scroll lock
+  '7', // numpad 7, HOME key if preceded by keycode 224
+  '8', // numpad 8, up arrow if preceded by keycode 224
+  '9', // numpad 9, PAGE UP key if preceded by keycode 224
+  '-', // numpad hyphen
+  '4', // numpad 4, left arrow if preceded by keycode 224
+  '5', // numpad 5
+  '6', // numpad 6, right arrow if preceded by keycode 224
+  ' ',
+  '1', // numpad 1, END key if preceded by keycode 224
+  // -------- 80 to 89 --------
+  '2', // numpad 2, down arrow if preceded by keycode 224
+  '3', // numpad 3, PAGE DOWN key if preceded by keycode 224
+  '0', // numpad 0, INSERT key if preceded by keycode 224
+  '.', // numpad dot, DELETE key if preceded by keycode 224
+  ' ',' ',' ',' ',' ',' ',
+  // -------- 90 to 99 --------
+  ' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',
+  // -------- 100 to 109 --------
+  ' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',
+  // -------- 110 to 119 --------
+  ' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',
+  // -------- 120-127 --------
+  ' ',' ',' ',' ',' ',' ',' ',' ',
 };
+// Right control, right alt seem to send
+// keycode 224, then the left control/alt keycode
+// Arrow keys also send two interrupts, one 224 and then their actual code
+// Same for numpad enter
+// 197: Num Lock
+// 157: Pause|Break (followed by 197?)
+// Clicking on screen appears to send keycodes 70, 198
+  // Is this the MARK command or something like that?

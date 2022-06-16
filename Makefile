@@ -6,7 +6,7 @@
 #    By: rbourgea <rbourgea@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/04/24 16:00:27 by rbourgea          #+#    #+#              #
-#    Updated: 2022/06/10 15:22:37 by rbourgea         ###   ########.fr        #
+#    Updated: 2022/06/16 16:28:19 by rbourgea         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -15,12 +15,12 @@
 # **************************************************************************** #
 
 GREY    	=	\033[030m
-RED     	=	\033[031m # Error or Clean
-GREEN   	=	\033[032m # Done
-YELLOW  	=	\033[033m # Info
+RED     	=	\033[031m
+GREEN   	=	\033[032m
+YELLOW  	=	\033[033m
 BLUE    	=	\033[034m
-MAGENTA 	=	\033[035m # Build or Loading
-CYAN		=	\033[036m # End
+MAGENTA 	=	\033[035m
+CYAN		=	\033[036m
 BOLD		=	\033[1m
 RESET   	=	\033[0m
 
@@ -28,49 +28,77 @@ RESET   	=	\033[0m
 # 💾 VARIABLES
 # **************************************************************************** #
 
-NAME		=	rbourgea_kfs.bin
-ISO			=	rbourgea_kfs.iso
-
-CPATH		=	/home/user42/Bureau/i386-elf-7.5.0-Linux-x86_64/bin/
-CC			=	$(CPATH)i386-elf-gcc
-SFLAGS		=	-fno-builtin -fno-exceptions -fno-stack-protector -nostdlib -nodefaultlibs
-CFLAGS		=	-Wall -Wextra -ffreestanding $(SFLAGS) -O2 -I./src
-LFLAGS		=	-nodefaultlibs -nostdlib
-
-SRCS		=	src/kernel.c
-OBJS		=	$(SRCS:.c=.o)
-ASM_SRCS	=	src/boot.s
-ASM_OBJS	=	$(ASM_SRCS:.s=.o)
+BOOT		=	src/boot.s
+KERNEL		=	src/kernel.c
+ISOFILE		=	build/rbourgea_kfs.iso
+LINKER		=	src/linker.ld
+KERNEL_OUT	=	build/rbourgea_kfs.bin
+ISO_OUT		=	build/rbourgea_kfs.iso
 
 # **************************************************************************** #
 # 📖 RULES
 # **************************************************************************** #
 
-all: $(NAME)
+all: build
 
-$(NAME): $(ASM_OBJS) $(OBJS) linker.ld
-	@echo -n "$(RESET)\n$(BOLD)$(GREEN)[✓] GENERATE OBJS DONE$(RESET)"
-	@$(CC) -T linker.ld -o $@ $(CFLAGS) $(LFLAGS) $(ASM_OBJS) $(OBJS) -lgcc
-	@echo "$(BOLD)$(GREEN)[✓] $(NAME) LINK DONE$(RESET)"
-	@cp $(NAME) boot/
-	@grub-mkrescue -o $(ISO) . 2> /dev/null
-	@echo "$(BOLD)$(GREEN)[✓] $(ISO) READY$(RESET)"
-	@qemu-system-i386 -cdrom rbourgea_kfs.iso
-	@echo "$(BOLD)$(CYAN)[✓] BOOT DONE$(RESET)"
+build: clean
+	@mkdir -p build
+	@nasm -f elf32 ${BOOT} -o build/boot.o
+	@gcc -m32 -ffreestanding -c ${KERNEL} -o build/kernel.o
+	@ld -m elf_i386 -T ${LINKER} -o ${KERNEL_OUT} build/boot.o build/kernel.o
 
-$(ASM_OBJS): $(ASM_SRCS)
-	@clear
-	@$(CPATH)i386-elf-as $< -o $@
-	@echo "$(BOLD)$(GREEN)[✓] $(NAME) BUILD boot.s DONE$(RESET)"
+build_debug: clean
+	@mkdir -p build
+	@nasm -f elf32 ${BOOT} -o build/boot.o
+	@gcc -m32 -ffreestanding -c ${KERNEL} -o build/kernel.o -ggdb
+	@ld -m elf_i386 -T ${LINKER} -o ${KERNEL_OUT} build/boot.o build/kernel.o
 
-clean:
-	@rm -rf $(ASM_OBJS) $(OBJS)
-	@echo "$(BOLD)$(RED)[♻︎] DELETE OBJS DONE$(RESET)"
+run: build
+	@qemu-system-i386 -kernel ${KERNEL_OUT} -monitor stdio
+
+debug: build_debug
+	@qemu-system-i386 -kernel ${KERNEL_OUT} -s -S &
+	@gdb -x .gdbinit
+
+iso: build
+	@mkdir -p build/iso/boot/grub
+	@cp grub.cfg build/iso/boot/grub
+	@cp ${KERNEL_OUT} build/iso/boot/grub
+	@grub-mkrescue -o ${ISO_OUT} build/iso
+	@rm -rf build/iso
+
+run-iso: iso
+	@qemu-system-i386 -cdrom ${ISOFILE}
+
+# all: $(NAME)
+
+# $(NAME): $(ASM_OBJS) $(OBJS) linker.ld
+# 	@echo -n "$(RESET)\n$(BOLD)$(GREEN)[✓] GENERATE OBJS DONE$(RESET)"
+# 	@$(CC) -T linker.ld -o $@ $(CFLAGS) $(LFLAGS) $(ASM_OBJS) $(OBJS) -lgcc
+# 	@echo "$(BOLD)$(GREEN)[✓] $(NAME) LINK DONE$(RESET)"
+# 	@cp $(NAME) boot/
+# 	@grub-mkrescue -o $(ISO) . 2> /dev/null
+# 	@echo "$(BOLD)$(GREEN)[✓] $(ISO) READY$(RESET)"
+
+# debug:
+# 	@qemu-system-i386 -cdrom rbourgea_kfs.iso -s -S -gdb stdio
+# 	@gdb -x .gdbinit
+# 	@echo "$(BOLD)$(CYAN)[✓] KERNEL DEBUG EXIT DONE$(RESET)"
+
+# run:
+# 	@qemu-system-i386 -cdrom rbourgea_kfs.iso
+# 	@echo "$(BOLD)$(CYAN)[✓] KERNEL EXIT DONE$(RESET)"
+
+# $(ASM_OBJS): $(ASM_SRCS)
+# 	@clear
+# 	nasm -f elf64 $< -o $@
+# 	@echo "$(BOLD)$(GREEN)[✓] $(NAME) BUILD boot.s DONE$(RESET)"
+
+# clean:
+# 	@rm -rf $(ASM_OBJS) $(OBJS)
+# 	@echo "$(BOLD)$(RED)[♻︎] DELETE OBJS DONE$(RESET)"
 
 fclean: clean
-	@rm -rf $(NAME)
-	@rm -rf boot/$(NAME)
-	@rm -rf $(ISO)
 	@echo "$(BOLD)$(RED)[♻︎] DELETE BINARY FILES DONE$(RESET)"
 
 re: fclean all

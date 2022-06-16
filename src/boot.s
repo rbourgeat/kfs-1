@@ -1,62 +1,76 @@
-/* Declare constants for the multiboot header. */
-.set ALIGN,    1<<0             /* align loaded modules on page boundaries */
-.set MEMINFO,  1<<1             /* provide memory map */
-.set FLAGS,    ALIGN | MEMINFO  /* this is the Multiboot 'flag' field */
-.set MAGIC,    0x1BADB002       /* 'magic number' lets bootloader find the header */
-.set CHECKSUM, -(MAGIC + FLAGS) /* checksum of above, to prove we are multiboot */
- 
+bits 32
+section .multiboot
+	dd 0x1BADB002	; Magic number
+	dd 0x0			; Flags
+	dd - (0x1BADB002 + 0x0)	; Checksum
 
-.section .multiboot
-.align 4
-.long MAGIC
-.long FLAGS
-.long CHECKSUM
+section .text
 
-.global keyboard_handler
-.global read_port
-.global write_port
-.global load_idt
+; Make global anything that is used in main.c
+global start
+global print_char_with_asm
+global load_idt
+global keyboard_handler
+global ioport_in
+global ioport_out
+global enable_interrupts
 
-.extern kmain 		# this is defined in the c file
-.extern keyboard_handler_main
-
-read_port:
-	mov 4(%esp), %edx
-			# al is the lower 8 bits of eax
-	in %dx, %al	# dx is the lower 16 bits of edx
-	ret
-
-write_port:
-	mov   3(%esp), %edx
-	mov   8(%esp), %al 
-	out   %al, %dx  
-	ret
+extern kmain			; Defined in kernel.c
+extern handle_keyboard_interrupt
 
 load_idt:
-	mov 4(%esp), %edx
-	lidt (%edx)
-	sti 				# turn on interrupts
+	mov edx, [esp + 4]
+	lidt [edx]
 	ret
 
-keyboard_handler:                 
-	call    keyboard_handler_main
-	iretl
+enable_interrupts:
+	sti
+	ret
 
-.section .bss
-.align 16
-stack_bottom:
-.skip 16384 # 16 KiB
-stack_top:
- 
+keyboard_handler:
+	pushad
+	cld
+	call handle_keyboard_interrupt
+	popad
+	iretd
 
-.section .text
-.global _start
-.type _start, @function
-_start:
-	mov $stack_top, %esp
+ioport_in:
+	mov edx, [esp + 4] ; PORT_TO_READ, 16 bits
+	; dx is lower 16 bits of edx. al is lower 8 bits of eax
+	; Format: in <DESTINATION_REGISTER>, <PORT_TO_READ>
+	in al, dx					 ; Read from port DX. Store value in AL
+	; Return will send back the value in eax
+	; (al in this case since return type is char, 8 bits)
+	ret
+
+ioport_out:
+	mov edx, [esp + 4]	; port to write; DST_IO_PORT. 16 bits
+	mov eax, [esp + 8] 	; value to write. 8 bits
+	; Format: out <DST_IO_PORT>, <VALUE_TO_WRITE>
+	out dx, al
+	ret
+
+print_char_with_asm:
+	; OFFSET = (ROW * 80) + COL
+	mov eax, [esp + 8] 		; eax = row
+	mov edx, 80						; 80 (number of cols per row)
+	mul edx								; now eax = row * 80
+	add eax, [esp + 12] 	; now eax = row * 80 + col
+	mov edx, 2						; * 2 because 2 bytes per char on screen
+	mul edx
+	mov edx, 0xb8000			; vid mem start in edx
+	add edx, eax					; Add our calculated offset
+	mov eax, [esp + 4] 		; char c
+	mov [edx], al
+	ret
+
+start:
+	mov esp, stack_space        ; set stack pointer
+	cli				; Disable interrupts
+	mov esp, stack_space
 	call kmain
-	cli
-1:	hlt
-	jmp 1b
+	hlt
 
-.size _start, . - _start
+section .bss
+resb 8192			; 8KB for stack
+stack_space:
