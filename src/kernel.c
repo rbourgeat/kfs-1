@@ -6,37 +6,43 @@
 /*   By: rbourgea <rbourgea@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/06/16 16:29:20 by rbourgea          #+#    #+#             */
-/*   Updated: 2022/06/16 16:29:21 by rbourgea         ###   ########.fr       */
+/*   Updated: 2022/06/16 19:06:15 by rbourgea         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-// ----- Pre-processor constants -----
-#define ROWS 25
-#define COLS 80
-// IDT_SIZE: Specific to x86 architecture
-#define IDT_SIZE 256
-// KERNEL_CODE_SEGMENT_OFFSET: the first segment after the null segment in gdt.asm
-#define KERNEL_CODE_SEGMENT_OFFSET 0x8
-// 32-bit Interrupt gate: 0x8E
-// ( P=1, DPL=00b, S=0, type=1110b => type_attr=1000_1110b=0x8E) (thanks osdev.org)
-#define IDT_INTERRUPT_GATE_32BIT 0x8e
-// IO Ports for PICs
-#define PIC1_COMMAND_PORT 0x20
-#define PIC1_DATA_PORT 0x21
-#define PIC2_COMMAND_PORT 0xA0
-#define PIC2_DATA_PORT 0xA1
-// IO Ports for Keyboard
-#define KEYBOARD_DATA_PORT 0x60
-#define KEYBOARD_STATUS_PORT 0x64
+/* ************************************************************************** */
+/* Includes                                                                   */
+/* ************************************************************************** */
 
-// ----- Includes -----
-#include "kernel.h"
 #include "keyboard_map.h"
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
-// ----- boot.s functions -----
+/* ************************************************************************** */
+/* Pre-processor constants                                                    */
+/* ************************************************************************** */
+
+# define LINES 25 // 2 bytes each
+# define COLUMNS_IN_LINE 80
+
+# define IDT_SIZE 256 // Specific to x86 architecture
+# define KERNEL_CODE_SEGMENT_OFFSET 0x8
+# define IDT_INTERRUPT_GATE_32BIT 0x8e
+
+# define PIC1_COMMAND_PORT 0x20
+# define PIC1_DATA_PORT 0x21
+# define PIC2_COMMAND_PORT 0xA0
+# define PIC2_DATA_PORT 0xA1
+
+# define KEYBOARD_DATA_PORT 0x60
+# define KEYBOARD_STATUS_PORT 0x64
+
+/* ************************************************************************** */
+/* boots.s functions                                                          */
+/* ************************************************************************** */
+
 extern void print_char_with_asm(char c, int row, int col);
 extern void keyboard_handler();
 extern char ioport_in(unsigned short port);
@@ -44,11 +50,15 @@ extern void ioport_out(unsigned short port, unsigned char data);
 extern void load_idt(unsigned int* idt_address);
 extern void enable_interrupts();
 
-// ----- Structs -----
+/* ************************************************************************** */
+/* Structs                                                                    */
+/* ************************************************************************** */
+
 struct IDT_pointer {
 	unsigned short limit;
 	unsigned int base;
 } __attribute__((packed));
+
 struct IDT_entry {
 	unsigned short offset_lowerbits; // 16 bits
 	unsigned short selector; // 16 bits
@@ -57,12 +67,52 @@ struct IDT_entry {
 	unsigned short offset_upperbits; // 16 bits
 } __attribute__((packed));
 
-// ----- Global variables -----
+enum vga_color {
+	VGA_COLOR_BLACK = 0,
+	VGA_COLOR_BLUE = 1,
+	VGA_COLOR_GREEN = 2,
+	VGA_COLOR_CYAN = 3,
+	VGA_COLOR_RED = 4,
+	VGA_COLOR_MAGENTA = 5,
+	VGA_COLOR_BROWN = 6,
+	VGA_COLOR_LIGHT_GREY = 7,
+	VGA_COLOR_DARK_GREY = 8,
+	VGA_COLOR_LIGHT_BLUE = 9,
+	VGA_COLOR_LIGHT_GREEN = 10,
+	VGA_COLOR_LIGHT_CYAN = 11,
+	VGA_COLOR_LIGHT_RED = 12,
+	VGA_COLOR_LIGHT_MAGENTA = 13,
+	VGA_COLOR_LIGHT_BROWN = 14,
+	VGA_COLOR_WHITE = 15,
+};
+
+/* ************************************************************************** */
+/* Globals                                                                    */
+/* ************************************************************************** */
+
 struct IDT_entry IDT[IDT_SIZE]; // This is our entire IDT. Room for 256 interrupts
 
+static const size_t VGA_WIDTH = 80;
+static const size_t VGA_HEIGHT = 25;
+ 
+size_t		terminal_row;
+size_t		terminal_column;
+uint8_t		terminal_color;
+uint16_t*	terminal_buffer;
+
+char*		prompt_buffer;
+
+/* ************************************************************************** */
+/* Functions                                                                  */
+/* ************************************************************************** */
+
+void	kputchar(char c);
+size_t	kstrlen(const char* str);
+void	kcolor(uint8_t color);
+void	kprompt(char c);
+
 void init_idt() {
-	// Get the address of the keyboard_handler code in kernel.asm as a number
-	unsigned int offset = (unsigned int)keyboard_handler;
+	unsigned int offset = (unsigned int)keyboard_handler; //get addr in boot.s
 	// Populate the first entry of the IDT
 	// TODO why 0x21 and not 0x0?
 	// My guess: 0x0 to 0x2 are reserved for CPU, so we use the first avail
@@ -125,7 +175,7 @@ void init_idt() {
 	idt_ptr.limit = (sizeof(struct IDT_entry) * IDT_SIZE) - 1;
 	idt_ptr.base = (unsigned int) &IDT;
 	// Now load this IDT
-	load_idt(&idt_ptr);
+	load_idt((unsigned int*)&idt_ptr);
 }
 
 void kb_init() {
@@ -144,34 +194,46 @@ void handle_keyboard_interrupt() {
 	if (status & 0x1) {
 		char keycode = ioport_in(KEYBOARD_DATA_PORT);
 		if (keycode < 0 || keycode >= 128) return; // how did they know keycode is signed?
-		kputchar(keyboard_map[keycode]);
+		kprompt(keyboard_map[keycode]);
 	}
 }
 
-/* there are 25 lines each of 80 columns; each element takes 2 bytes */
-#define LINES 25
-#define COLUMNS_IN_LINE 80
-#define BYTES_FOR_EACH_ELEMENT 2
-#define SCREENSIZE BYTES_FOR_EACH_ELEMENT * COLUMNS_IN_LINE * LINES
+char	*kstrjoin(char const *s1, char const *s2)
+{
+	size_t	count;
+	size_t	size_s1;
+	char	*tab;
 
-enum vga_color {
-	VGA_COLOR_BLACK = 0,
-	VGA_COLOR_BLUE = 1,
-	VGA_COLOR_GREEN = 2,
-	VGA_COLOR_CYAN = 3,
-	VGA_COLOR_RED = 4,
-	VGA_COLOR_MAGENTA = 5,
-	VGA_COLOR_BROWN = 6,
-	VGA_COLOR_LIGHT_GREY = 7,
-	VGA_COLOR_DARK_GREY = 8,
-	VGA_COLOR_LIGHT_BLUE = 9,
-	VGA_COLOR_LIGHT_GREEN = 10,
-	VGA_COLOR_LIGHT_CYAN = 11,
-	VGA_COLOR_LIGHT_RED = 12,
-	VGA_COLOR_LIGHT_MAGENTA = 13,
-	VGA_COLOR_LIGHT_BROWN = 14,
-	VGA_COLOR_WHITE = 15,
-};
+	count = -1;
+	if (!s1 || !s2)
+		return (NULL);
+	size_s1 = kstrlen(s1);
+	while (s1[++count])
+		tab[count] = s1[count];
+	count = -1;
+	while (s2[++count])
+		tab[size_s1 + count] = s2[count];
+	tab[size_s1 + count] = '\0';
+	return (tab);
+}
+
+void kprompt(char c)
+{
+	if (c == '\n')
+	{
+		prompt_buffer = "";
+		terminal_column = 0;
+		terminal_row++;
+	}
+	if (terminal_column == 0)
+	{
+		kcolor(VGA_COLOR_RED);
+		kputstr("@rbourgea > ");
+		kcolor(VGA_COLOR_WHITE);
+	}
+	kputchar(c);
+	prompt_buffer = kstrjoin(prompt_buffer, c);
+}
 
 static inline uint8_t vga_entry_color(enum vga_color fg, enum vga_color bg)
 {
@@ -183,21 +245,13 @@ static inline uint16_t vga_entry(unsigned char uc, uint8_t color)
 	return (uint16_t) uc | (uint16_t) color << 8;
 }
  
-size_t strlen(const char* str)
+size_t kstrlen(const char* str)
 {
 	size_t len = 0;
 	while (str[len])
 		len++;
 	return len;
 }
- 
-static const size_t VGA_WIDTH = 80;
-static const size_t VGA_HEIGHT = 25;
- 
-size_t terminal_row;
-size_t terminal_column;
-uint8_t terminal_color;
-uint16_t* terminal_buffer;
 
 void terminal_initialize(void)
 {
@@ -239,15 +293,10 @@ void kputchar(char c)
 	}
 }
 
-void kwrite(const char* data, size_t size) 
-{
-	for (size_t i = 0; i < size; i++)
-		kputchar(data[i]);
-}
-
 void kputstr(const char* data) 
 {
-	kwrite(data, strlen(data));
+	for (size_t i = 0; i < kstrlen(data); i++)
+		kputchar(data[i]);
 }
 
 static void khello(void)
@@ -266,15 +315,13 @@ static void khello(void)
 }
 
 // ----- Entry point -----
-void kmain() {
-	/* Don't remove this */
+void kmain()
+{
+
 	terminal_initialize();
 	khello();
-	/* ================ */
-
 	kputstr("Hello, 42!\n");
 
-	// print_message();
 	init_idt();
 	kb_init();
 	enable_interrupts();
