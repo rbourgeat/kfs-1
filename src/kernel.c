@@ -6,7 +6,7 @@
 /*   By: rbourgea <rbourgea@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/06/16 16:29:20 by rbourgea          #+#    #+#             */
-/*   Updated: 2022/06/16 19:06:15 by rbourgea         ###   ########.fr       */
+/*   Updated: 2022/06/16 19:41:45 by rbourgea         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -106,12 +106,14 @@ char*		prompt_buffer;
 /* Functions                                                                  */
 /* ************************************************************************** */
 
+void	kputstr(const char* data);
 void	kputchar(char c);
 size_t	kstrlen(const char* str);
 void	kcolor(uint8_t color);
 void	kprompt(char c);
 
-void init_idt() {
+void init_idt()
+{
 	unsigned int offset = (unsigned int)keyboard_handler; //get addr in boot.s
 	// Populate the first entry of the IDT
 	// TODO why 0x21 and not 0x0?
@@ -178,22 +180,22 @@ void init_idt() {
 	load_idt((unsigned int*)&idt_ptr);
 }
 
-void kb_init() {
+void kb_init()
+{
 	// 0xFD = 1111 1101 in binary. enables only IRQ1
 	// Why IRQ1? Remember, IRQ0 exists, it's 0-based
 	ioport_out(PIC1_DATA_PORT, 0xFD);
 }
 
-void handle_keyboard_interrupt() {
-	// Write end of interrupt (EOI)
-	ioport_out(PIC1_COMMAND_PORT, 0x20);
-
+void handle_keyboard_interrupt()
+{
+	ioport_out(PIC1_COMMAND_PORT, 0x20); // write end of interrupt (EOI)
 	unsigned char status = ioport_in(KEYBOARD_STATUS_PORT);
-	// Lowest bit of status will be set if buffer not empty
-	// (thanks mkeykernel)
+
 	if (status & 0x1) {
 		char keycode = ioport_in(KEYBOARD_DATA_PORT);
-		if (keycode < 0 || keycode >= 128) return; // how did they know keycode is signed?
+		if (keycode < 0 || keycode >= 128)
+			return;
 		kprompt(keyboard_map[keycode]);
 	}
 }
@@ -220,19 +222,16 @@ char	*kstrjoin(char const *s1, char const *s2)
 void kprompt(char c)
 {
 	if (c == '\n')
-	{
 		prompt_buffer = "";
-		terminal_column = 0;
-		terminal_row++;
-	}
+	else
+		prompt_buffer = kstrjoin(prompt_buffer, c);
+	kputchar((const char)c);
 	if (terminal_column == 0)
 	{
 		kcolor(VGA_COLOR_RED);
-		kputstr("@rbourgea > ");
+		// kputstr("@rbourgea > ");
 		kcolor(VGA_COLOR_WHITE);
 	}
-	kputchar(c);
-	prompt_buffer = kstrjoin(prompt_buffer, c);
 }
 
 static inline uint8_t vga_entry_color(enum vga_color fg, enum vga_color bg)
@@ -314,16 +313,15 @@ static void khello(void)
 	kcolor(VGA_COLOR_WHITE);
 }
 
-// ----- Entry point -----
 void kmain()
 {
 
 	terminal_initialize();
 	khello();
-	kputstr("Hello, 42!\n");
+	kputstr("Hello, 42!\n\n");
 
 	init_idt();
 	kb_init();
 	enable_interrupts();
-	while(1);
+	while(42);
 }
