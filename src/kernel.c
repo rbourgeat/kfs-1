@@ -6,7 +6,7 @@
 /*   By: rbourgea <rbourgea@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/06/16 16:29:20 by rbourgea          #+#    #+#             */
-/*   Updated: 2022/06/17 20:32:44 by rbourgea         ###   ########.fr       */
+/*   Updated: 2022/06/17 21:06:58 by rbourgea         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -354,6 +354,8 @@ void kputchar(char c)
 	if (c == '\n') {
 		tty_column = 0;
 		tty_row++;
+		if (tty_row == VGA_HEIGHT)
+			terminal_initialize(1);
 		return;
 	}
 	terminal_putentryat(c, tty_color, tty_column, tty_row);
