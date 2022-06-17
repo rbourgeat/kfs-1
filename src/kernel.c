@@ -6,7 +6,7 @@
 /*   By: rbourgea <rbourgea@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/06/16 16:29:20 by rbourgea          #+#    #+#             */
-/*   Updated: 2022/06/17 17:02:07 by rbourgea         ###   ########.fr       */
+/*   Updated: 2022/06/17 20:32:44 by rbourgea         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -109,6 +109,7 @@ uint16_t	*terminal_buffer;
 
 char*		prompt_buffer;
 int			tty_nb = 0;
+int			tty_pos = 0;
 
 /* ************************************************************************** */
 /* Functions                                                                  */
@@ -175,6 +176,14 @@ void init_idt()
 	idt_ptr.base = (unsigned int) &IDT;
 	// Now load this IDT
 	load_idt((unsigned int*)&idt_ptr);
+}
+
+void set_cursor_position(uint16_t position)
+{
+	ioport_out(0x3D4, 14);
+	ioport_out(0x3D5, (position >> 8));
+	ioport_out(0x3D4, 15);
+	ioport_out(0x3D5, position);
 }
 
 void kb_init()
@@ -266,7 +275,7 @@ void kprompt(char c)
 		switch_screen(c + (-c * 2) - 1); // shortcut
 		return;
 	}
-	if (tty_column == 0)
+	if (c == '\n' || c == 0)
 	{
 		kcolor(VGA_COLOR_RED);
 		kputstr("[@rbourgea] \7 ");
@@ -274,6 +283,8 @@ void kprompt(char c)
 	}
 	if (c != '\n')
 		kputchar((const char)c);
+	tty_pos = tty_column + tty_row * VGA_WIDTH;
+	set_cursor_position((uint16_t)(tty_pos));
 }
 
 static inline uint8_t vga_entry_color(enum vga_color fg, enum vga_color bg)
