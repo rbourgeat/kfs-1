@@ -6,7 +6,7 @@
 /*   By: rbourgea <rbourgea@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/06/16 16:29:20 by rbourgea          #+#    #+#             */
-/*   Updated: 2022/06/17 07:18:03 by rbourgea         ###   ########.fr       */
+/*   Updated: 2022/06/17 17:02:07 by rbourgea         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -120,38 +120,23 @@ size_t	kstrlen(const char* str);
 void	kcolor(uint8_t color);
 void	kprompt(char c);
 char	*kstrjoin(char const *s1, char const *s2);
-char	*kitoa(int n);
 void	terminal_initialize(int init);
-static void khello(void);
+void	khello(void);
+void	*kmemset(void *b, int c, unsigned int len);
+int		kintlen(int n);
+void	kputnbr(int n);
 
 void init_idt()
 {
 	unsigned int offset = (unsigned int)keyboard_handler; //get addr in boot.s
-	// Populate the first entry of the IDT
-	// TODO why 0x21 and not 0x0?
-	// My guess: 0x0 to 0x2 are reserved for CPU, so we use the first avail
+
 	IDT[0x21].offset_lowerbits = offset & 0x0000FFFF; // lower 16 bits
 	IDT[0x21].selector = KERNEL_CODE_SEGMENT_OFFSET;
 	IDT[0x21].zero = 0;
 	IDT[0x21].type_attr = IDT_INTERRUPT_GATE_32BIT;
 	IDT[0x21].offset_upperbits = (offset & 0xFFFF0000) >> 16;
-	// Program the PICs - Programmable Interrupt Controllers
-	// Background:
-		// In modern architectures, the PIC is not a separate chip.
-		// It is emulated in the CPU for backwards compatability.
-		// The APIC (Advanced Programmable Interrupt Controller)
-		// is the new version of the PIC that is integrated into the CPU.
-		// Default vector offset for PIC is 8
-		// This maps IRQ0 to interrupt 8, IRQ1 to interrupt 9, etc.
-		// This is a problem. The CPU reserves the first 32 interrupts for
-		// CPU exceptions such as divide by 0, etc.
-		// In programming the PICs, we move this offset to 0x2 (32) so that
-		// we can handle all interrupts coming to the PICs without overlapping
-		// with any CPU exceptions.
+	// PICs = Programmable Interrupt Controllers
 
-	// Send ICWs - Initialization Command Words
-	// PIC1: IO Port 0x20 (command), 0xA0 (data)
-	// PIC2: IO Port 0x21 (command), 0xA1 (data)
 	// ICW1: Initialization command
 	// Send a fixed value of 0x11 to each PIC to tell it to expect ICW2-4
 	// Restart PIC1
@@ -194,8 +179,6 @@ void init_idt()
 
 void kb_init()
 {
-	// 0xFD = 1111 1101 in binary. enables only IRQ1
-	// Why IRQ1? Remember, IRQ0 exists, it's 0-based
 	ioport_out(PIC1_DATA_PORT, 0xFD);
 }
 
@@ -355,32 +338,6 @@ static int count_digits(int n)
 	return (digits);
 }
 
-char *kitoa(int n)
-{
-	char			*result;
-	int				digits;
-	int				i;
-	int				stop;
-	unsigned	int	nbr;
-
-	digits = count_digits(n);
-	i = digits - 1;
-	stop = ((n < 0) ? 0 : -1);
-	if (n < 0)
-		nbr = n == -2147483648 ? 2147483648 : -n;
-	else
-		nbr = n;
-	result[digits] = '\0';
-	while (i > stop)
-	{
-		result[i--] = nbr % 10 + '0';
-		nbr = nbr / 10;
-	}
-	if (stop == 0)
-		result[0] = '-';
-	return (result);
-}
-
 void kputchar(char c)
 {
 	if (c == '\n') {
@@ -402,7 +359,7 @@ void kputstr(const char* data)
 		kputchar(data[i]);
 }
 
-static void khello(void)
+void khello(void)
 {
 	kcolor(VGA_COLOR_LIGHT_GREEN);
 	kputstr("\n $$\\   $$\\  $$$$$$\\        $$\\        $$$$$$\\           \n");
@@ -421,11 +378,145 @@ static void khello(void)
 	kcolor(VGA_COLOR_WHITE);
 }
 
+void	*kmemset(void *b, int c, unsigned int len)
+{
+	unsigned int	i;
+
+	i = 0;
+	while (i < len)
+	{
+		((char *)(b))[i] = c;
+	i++;
+	}
+	return b;
+}
+
+void hex_to_str(unsigned int addr, char *result, int size)
+{
+	int	len;
+	char	base_str[16] = "0123456789abcdef";
+
+	len = size - 1;
+	kmemset(result, '0', size);
+	result[size - 1] = 0;
+	while (addr != 0)
+	{
+		result[--len] = base_str[addr % 16];
+		addr = addr / 16;
+	}
+}
+
+int	kintlen(int n)
+{
+	int	i;
+
+	i = 1;
+	if (n < 0) {
+		n = -n;
+		i++;
+	}
+	while (n >= 10)
+	{
+		n = n / 10;
+		i++;
+	}
+	return (i);
+}
+
+void	kitoa(int n, char *str)
+{
+	int	nb;
+	int	i;
+	int	len;
+
+	nb = n;
+	len = kintlen(n);
+	kmemset(str, 0, len + 1);
+	if (nb < 0) {
+		nb = -nb;
+	}
+	i = len - 1;
+	if (nb == 0) {
+		str[i] = '0';
+		return;
+	}
+	while (nb != 0)
+	{
+		str[i--] = (nb % 10) + '0';
+		nb = nb / 10;
+	}
+	if (n < 0)
+		str[i] = '-';
+}
+
+void kputnbr(int n)
+{
+	char	str[kintlen(n) + 1];
+
+	kitoa(n, str);
+	kputstr(str);
+}
+
+void printk(char *str, ...)
+{
+	int		*nb_args;
+	char	*args;
+	int		i;
+	char	tmp_addr[9];
+	uint8_t	zero_padding;
+
+	nb_args = (int *)(&str);
+	args = (char *)(*nb_args++);
+	i = 0;
+	while (args[i]) {
+		zero_padding = 0;
+		if (args[i] == '%') {
+			i++;
+			if (args[i] == '0') {
+				i++;
+				zero_padding = args[i] - '0';
+				i++;
+			}
+			if (args[i] == 'c')
+				kputchar(*nb_args++);
+			else if (args[i] == 's')
+				kputstr(*((char **)nb_args++));
+			else if (args[i] == 'x') {
+				kmemset(tmp_addr, 0, sizeof(tmp_addr));
+				hex_to_str(*nb_args++, tmp_addr, sizeof(tmp_addr));
+				kputstr(tmp_addr);
+			}
+			else if (args[i] == 'p') {
+				kmemset(tmp_addr, 0, sizeof(tmp_addr));
+				hex_to_str(*nb_args++, tmp_addr, sizeof(tmp_addr));
+				kputstr("0x");
+				kputstr(tmp_addr);
+			}
+			else if (args[i] == 'd') {
+				if (zero_padding > 0) {
+					while (zero_padding - kintlen(*nb_args)) {
+						kputchar('0');
+						zero_padding--;
+					}
+				}
+				kputnbr(*nb_args++);
+			}
+			else {
+				kputchar('%');
+				kputchar(args[i]);
+			}
+		}
+		else
+			kputchar(args[i]);
+		i++;
+	}
+}
+
 void kmain()
 {
 	terminal_initialize(1);
 	khello();
-	kputstr("\11 Hello, 42!\n\n");
+	printk("\11 %s, %d%c\n\n", "Hello", 42, '!');
 
 	init_idt();
 	kb_init();
