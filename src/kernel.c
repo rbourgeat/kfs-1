@@ -6,7 +6,7 @@
 /*   By: rbourgea <rbourgea@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/06/16 16:29:20 by rbourgea          #+#    #+#             */
-/*   Updated: 2022/06/16 19:41:45 by rbourgea         ###   ########.fr       */
+/*   Updated: 2022/06/17 07:18:03 by rbourgea         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -86,21 +86,29 @@ enum vga_color {
 	VGA_COLOR_WHITE = 15,
 };
 
+// struct s_screen {
+// 	unsigned int nb;
+// 	uint16_t	*terminal_buffer;
+// }		t_screen;
+
 /* ************************************************************************** */
 /* Globals                                                                    */
 /* ************************************************************************** */
+
+uint16_t ttys[10];
 
 struct IDT_entry IDT[IDT_SIZE]; // This is our entire IDT. Room for 256 interrupts
 
 static const size_t VGA_WIDTH = 80;
 static const size_t VGA_HEIGHT = 25;
  
-size_t		terminal_row;
-size_t		terminal_column;
-uint8_t		terminal_color;
-uint16_t*	terminal_buffer;
+size_t		tty_row;
+size_t		tty_column;
+uint8_t		tty_color;
+uint16_t	*terminal_buffer;
 
 char*		prompt_buffer;
+int			tty_nb = 0;
 
 /* ************************************************************************** */
 /* Functions                                                                  */
@@ -111,6 +119,10 @@ void	kputchar(char c);
 size_t	kstrlen(const char* str);
 void	kcolor(uint8_t color);
 void	kprompt(char c);
+char	*kstrjoin(char const *s1, char const *s2);
+char	*kitoa(int n);
+void	terminal_initialize(int init);
+static void khello(void);
 
 void init_idt()
 {
@@ -219,19 +231,66 @@ char	*kstrjoin(char const *s1, char const *s2)
 	return (tab);
 }
 
+void switch_screen(int nb)
+{
+	// ttys[tty_nb] = terminal_buffer;
+	// prompt_buffer = "";
+	if (ttys[nb])
+	{
+		// terminal_buffer = ttys[nb];
+		tty_nb = nb;
+		terminal_initialize(1);
+		khello();
+		kprompt(0);
+	}
+	else
+	{
+		tty_nb = nb;
+		terminal_initialize(1);
+		khello();
+		kprompt(0);
+	}
+}
+
 void kprompt(char c)
 {
-	if (c == '\n')
-		prompt_buffer = "";
-	else
-		prompt_buffer = kstrjoin(prompt_buffer, c);
-	kputchar((const char)c);
-	if (terminal_column == 0)
+	char *tmp;
+
+	tmp[0] = c;
+	if (c == '\n')			// Enter
+		kputchar('\n');
+	else if (c == '\b')		// Delete
+	{
+		if (tty_column == 0)
+			return;
+		tty_column--;
+		kputchar(' ');
+		tty_column--;
+		return;
+	}
+	else if (c == -11)		// left Ctrl
+	{
+		// kputstr("left Ctrl");
+		return;
+	}
+	else if (c == -12)		// left Shift
+	{
+		// kputstr("left Shift");
+		return;
+	}
+	else if (c < 0 && c > -11)	// F1 to F10
+	{
+		switch_screen(c + (-c * 2) - 1); // shortcut
+		return;
+	}
+	if (tty_column == 0)
 	{
 		kcolor(VGA_COLOR_RED);
-		// kputstr("@rbourgea > ");
-		kcolor(VGA_COLOR_WHITE);
+		kputstr("[@rbourgea] \7 ");
+		kcolor(VGA_COLOR_LIGHT_GREY);
 	}
+	if (c != '\n')
+		kputchar((const char)c);
 }
 
 static inline uint8_t vga_entry_color(enum vga_color fg, enum vga_color bg)
@@ -252,23 +311,27 @@ size_t kstrlen(const char* str)
 	return len;
 }
 
-void terminal_initialize(void)
+void terminal_initialize(int init)
 {
-	terminal_row = 0;
-	terminal_column = 0;
-	terminal_color = vga_entry_color(VGA_COLOR_LIGHT_GREY, VGA_COLOR_BLACK);
-	terminal_buffer = (uint16_t*) 0xB8000;
+	tty_row = 0;
+	tty_column = 0;
+	tty_color = vga_entry_color(VGA_COLOR_LIGHT_GREY, VGA_COLOR_BLACK);
+	if (init == 1)
+		terminal_buffer = (uint16_t*) 0xB8000;
 	for (size_t y = 0; y < VGA_HEIGHT; y++) {
 		for (size_t x = 0; x < VGA_WIDTH; x++) {
 			const size_t index = y * VGA_WIDTH + x;
-			terminal_buffer[index] = vga_entry(' ', terminal_color);
+			if (init == 1)
+				terminal_buffer[index] = vga_entry(' ', tty_color);
+			else
+				vga_entry(terminal_buffer[index], tty_color);
 		}
 	}
 }
 
 void kcolor(uint8_t color)
 {
-	terminal_color = color;
+	tty_color = color;
 }
  
 void terminal_putentryat(char c, uint8_t color, size_t x, size_t y) 
@@ -277,18 +340,59 @@ void terminal_putentryat(char c, uint8_t color, size_t x, size_t y)
 	terminal_buffer[index] = vga_entry(c, color);
 }
 
+static int count_digits(int n)
+{
+	int digits;
+
+	if (n == 0)
+		return (1);
+	digits = n < 0 ? 1 : 0;
+	while (n != 0)
+	{
+		n = n / 10;
+		digits++;
+	}
+	return (digits);
+}
+
+char *kitoa(int n)
+{
+	char			*result;
+	int				digits;
+	int				i;
+	int				stop;
+	unsigned	int	nbr;
+
+	digits = count_digits(n);
+	i = digits - 1;
+	stop = ((n < 0) ? 0 : -1);
+	if (n < 0)
+		nbr = n == -2147483648 ? 2147483648 : -n;
+	else
+		nbr = n;
+	result[digits] = '\0';
+	while (i > stop)
+	{
+		result[i--] = nbr % 10 + '0';
+		nbr = nbr / 10;
+	}
+	if (stop == 0)
+		result[0] = '-';
+	return (result);
+}
+
 void kputchar(char c)
 {
 	if (c == '\n') {
-		terminal_column = 0;
-		terminal_row++;
+		tty_column = 0;
+		tty_row++;
 		return;
 	}
-	terminal_putentryat(c, terminal_color, terminal_column, terminal_row);
-	if (++terminal_column == VGA_WIDTH) {
-		terminal_column = 0;
-		if (++terminal_row == VGA_HEIGHT)
-			terminal_row = 0;
+	terminal_putentryat(c, tty_color, tty_column, tty_row);
+	if (++tty_column == VGA_WIDTH) {
+		tty_column = 0;
+		if (++tty_row == VGA_HEIGHT)
+			tty_row = 0;
 	}
 }
 
@@ -309,19 +413,24 @@ static void khello(void)
 	kputstr("       $$ |$$ |            $$  _$$<  $$ |      \\____$$\\ \n");
 	kputstr("       $$ |$$$$$$$$\\       $$ | \\$$\\ $$ |     $$$$$$$  |\n");
 	kputstr("       \\__|\\________|      \\__|  \\__|\\__|     \\_______/ \n\n");
-	kputstr("                                             by rbourgea\n\n");
+	kputstr("                                           by rbourgea \2\n");
+	kcolor(VGA_COLOR_LIGHT_MAGENTA);
+	kputstr("\4 Login on ttys");
+	kputchar((char)(tty_nb + '0'));
+	kputstr("\n\n");
 	kcolor(VGA_COLOR_WHITE);
 }
 
 void kmain()
 {
-
-	terminal_initialize();
+	terminal_initialize(1);
 	khello();
-	kputstr("Hello, 42!\n\n");
+	kputstr("\11 Hello, 42!\n\n");
 
 	init_idt();
 	kb_init();
 	enable_interrupts();
+
+	kprompt(0);
 	while(42);
 }
