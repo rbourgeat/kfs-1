@@ -6,7 +6,7 @@ Discover the world of "Kernel Programming" and learn how to create your very own
 - [x] Helper printk to print information / debug easily.
 - [x] Keyboard entries with prompt.
 - [x] Different screens, and keyboard shortcuts (F1, F2, ...) to switch easily between then. **(can be improve)**
-- [ ] Scroll and cursor support to I/O interface.
+- [x] Scroll and cursor support to I/O interface.
 
 ## 📖 Kernel Bible
 https://wiki.osdev.org/Main_Page
