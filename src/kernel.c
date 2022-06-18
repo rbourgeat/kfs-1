@@ -6,7 +6,7 @@
 /*   By: rbourgea <rbourgea@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/06/16 16:29:20 by rbourgea          #+#    #+#             */
-/*   Updated: 2022/06/17 21:06:58 by rbourgea         ###   ########.fr       */
+/*   Updated: 2022/06/18 15:26:49 by rbourgea         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -110,6 +110,7 @@ uint16_t	*terminal_buffer;
 char*		prompt_buffer;
 int			tty_nb = 0;
 int			tty_pos = 0;
+int			tty_prompt_pos = 0;
 
 /* ************************************************************************** */
 /* Functions                                                                  */
@@ -270,6 +271,22 @@ void kprompt(char c)
 		// kputstr("left Shift");
 		return;
 	}
+	else if (c == -13)		// left arrow
+	{
+		// if (tty_prompt_pos <= tty_pos)
+		// 	return;
+		tty_column--;
+		tty_pos = tty_column + tty_row * VGA_WIDTH;
+		set_cursor_position((uint16_t)(tty_pos));
+		return;
+	}
+	else if (c == -14)		// right arrow
+	{
+		tty_column++;
+		tty_pos = tty_column + tty_row * VGA_WIDTH;
+		set_cursor_position((uint16_t)(tty_pos));
+		return;
+	}
 	else if (c < 0 && c > -11)	// F1 to F10
 	{
 		switch_screen(c + (-c * 2) - 1); // shortcut
@@ -279,6 +296,7 @@ void kprompt(char c)
 	{
 		kcolor(VGA_COLOR_RED);
 		kputstr("[@rbourgea] \7 ");
+		tty_prompt_pos = tty_pos;
 		kcolor(VGA_COLOR_LIGHT_GREY);
 	}
 	if (c != '\n')

@@ -6,7 +6,7 @@
 /*   By: rbourgea <rbourgea@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/06/16 16:28:32 by rbourgea          #+#    #+#             */
-/*   Updated: 2022/06/17 05:07:31 by rbourgea         ###   ########.fr       */
+/*   Updated: 2022/06/18 01:25:37 by rbourgea         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -56,9 +56,9 @@ unsigned char keyboard_map[128] = {
   '8', // numpad 8, up arrow if preceded by keycode 224
   '9', // numpad 9, PAGE UP key if preceded by keycode 224
   '-', // numpad hyphen
-  '4', // numpad 4, left arrow if preceded by keycode 224
+  -13, // numpad 4, left arrow if preceded by keycode 224
   '5', // numpad 5
-  '6', // numpad 6, right arrow if preceded by keycode 224
+  -14, // numpad 6, right arrow if preceded by keycode 224
   '+',
   '1', // numpad 1, END key if preceded by keycode 224
   // -------- 80 to 89 --------
