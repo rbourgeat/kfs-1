@@ -6,7 +6,7 @@
 /*   By: rbourgea <rbourgea@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/06/16 16:29:20 by rbourgea          #+#    #+#             */
-/*   Updated: 2022/06/18 15:26:49 by rbourgea         ###   ########.fr       */
+/*   Updated: 2022/06/18 15:45:14 by rbourgea         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -259,6 +259,8 @@ void kprompt(char c)
 		tty_column--;
 		kputchar(' ');
 		tty_column--;
+		tty_pos = tty_column + tty_row * VGA_WIDTH;
+		set_cursor_position((uint16_t)(tty_pos));
 		return;
 	}
 	else if (c == -11)		// left Ctrl
@@ -403,7 +405,7 @@ void khello(void)
 	kputstr("       \\__|\\________|      \\__|  \\__|\\__|     \\_______/ \n\n");
 	kputstr("                                           by rbourgea \2\n");
 	kcolor(VGA_COLOR_LIGHT_MAGENTA);
-	kputstr("\4 Login on ttys");
+	kputstr(" \4 Login on ttys");
 	kputchar((char)(tty_nb + '0'));
 	kputstr("\n\n");
 	kcolor(VGA_COLOR_WHITE);
@@ -547,7 +549,7 @@ void kmain()
 {
 	terminal_initialize(1);
 	khello();
-	printk("\11 %s, %d%c\n\n", "Hello", 42, '!');
+	printk(" \11 %s, %d%c\n\n", "Hello", 42, '!');
 
 	init_idt();
 	kb_init();
