@@ -6,7 +6,7 @@
 /*   By: rbourgea <rbourgea@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/06/16 16:29:20 by rbourgea          #+#    #+#             */
-/*   Updated: 2022/06/19 16:56:14 by rbourgea         ###   ########.fr       */
+/*   Updated: 2022/06/19 17:15:05 by rbourgea         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -123,6 +123,7 @@ void	khello(void);
 void	*kmemset(void *b, int c, unsigned int len);
 int		kintlen(int n);
 void	kputnbr(int n);
+void	printk(char *str, ...);
 
 void init_idt()
 {
@@ -396,19 +397,20 @@ void kputstr(const char* data)
 void khello(void)
 {
 	kcolor(VGA_COLOR_LIGHT_GREEN);
-	kputstr("\n $$\\   $$\\  $$$$$$\\        $$\\        $$$$$$\\           \n");
-	kputstr(" $$ |  $$ |$$  __$$\\       $$ |      $$  __$$\\          \n");
-	kputstr(" $$ |  $$ |\\__/  $$ |      $$ |  $$\\ $$ /  \\__|$$$$$$$\\ \n");
-	kputstr(" $$$$$$$$ | $$$$$$  |      $$ | $$  |$$$$\\    $$  _____|\n");
-	kputstr(" \\_____$$ |$$  ____/       $$$$$$  / $$  _|   \\$$$$$$\\  \n");
-	kputstr("       $$ |$$ |            $$  _$$<  $$ |      \\____$$\\ \n");
-	kputstr("       $$ |$$$$$$$$\\       $$ | \\$$\\ $$ |     $$$$$$$  |\n");
+	kputstr("\n 42\\   42\\  424242\\        42\\        424242\\           \n");
+	kputstr(" 42 |  42 |42  __42\\       42 |      42  __42\\          \n");
+	kputstr(" 42 |  42 |\\__/  42 |      42 |  42\\ 42 /  \\__|424242=\\ \n");
+	kputstr(" 42424242 | 424242  |      42 | 42  |4242\\    42  _____|\n");
+	kputstr(" \\_____42 |42  ____/       424242  / 42  _|   \\424242\\  \n");
+	kputstr("       42 |42 |            42  _42<  42 |      \\____42\\ \n");
+	kputstr("       42 |42424242\\       42 | \\42\\ 42 |     424242/  |\n");
 	kputstr("       \\__|\\________|      \\__|  \\__|\\__|     \\_______/ \n\n");
 	kputstr("                                           by rbourgea \2\n");
 	kcolor(VGA_COLOR_LIGHT_MAGENTA);
-	kputstr(" \4 Login on ttys");
-	kputchar((char)(tty_nb + '0'));
-	kputstr("\n\n");
+	printk(" \4 Login on ttys%d\n", tty_nb);
+	// kputstr(" \4 Login on ttys");
+	// kputchar((char)(tty_nb + '0'));
+	// kputstr("\n");
 	kcolor(VGA_COLOR_WHITE);
 }
 
@@ -560,7 +562,7 @@ void kmain()
 	colrow_init();
 	terminal_initialize(-1);
 	khello();
-	printk(" \11 %s, %d%c\n\n", "Hello", 42, '!');
+	// printk(" \11 %s, %d%c\n\n", "Hello", 42, '!');
 
 	init_idt();
 	kb_init();
