@@ -6,7 +6,7 @@
 #    By: rbourgea <rbourgea@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/04/24 16:00:27 by rbourgea          #+#    #+#              #
-#    Updated: 2022/06/19 17:27:31 by rbourgea         ###   ########.fr        #
+#    Updated: 2022/06/19 17:31:16 by rbourgea         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -35,8 +35,7 @@ BOOT		=	src/boot.s
 KERNEL		=	src/kernel.c
 LINKER		=	src/linker.ld
 
-FLAGS		=	-fno-builtin -fno-builtin -fno-builtin -fno-rtti \
-				-nostdlib -nodefaultlibs -Wall -Wextra -Werror
+FLAGS		=	-fno-builtin -fno-builtin -fno-builtin -nostdlib -nodefaultlibs
 
 # **************************************************************************** #
 # 📖 RULES
