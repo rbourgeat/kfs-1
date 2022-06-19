@@ -6,7 +6,7 @@
 /*   By: rbourgea <rbourgea@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/06/16 16:29:20 by rbourgea          #+#    #+#             */
-/*   Updated: 2022/06/18 15:45:14 by rbourgea         ###   ########.fr       */
+/*   Updated: 2022/06/19 16:56:14 by rbourgea         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -86,16 +86,9 @@ enum vga_color {
 	VGA_COLOR_WHITE = 15,
 };
 
-// struct s_screen {
-// 	unsigned int nb;
-// 	uint16_t	*terminal_buffer;
-// }		t_screen;
-
 /* ************************************************************************** */
 /* Globals                                                                    */
 /* ************************************************************************** */
-
-uint16_t ttys[10];
 
 struct IDT_entry IDT[IDT_SIZE]; // This is our entire IDT. Room for 256 interrupts
 
@@ -111,6 +104,9 @@ char*		prompt_buffer;
 int			tty_nb = 0;
 int			tty_pos = 0;
 int			tty_prompt_pos = 0;
+char		ttys[10][80][25];
+size_t		ttys_row[10];
+size_t		ttys_column[10];
 
 /* ************************************************************************** */
 /* Functions                                                                  */
@@ -130,7 +126,7 @@ void	kputnbr(int n);
 
 void init_idt()
 {
-	unsigned int offset = (unsigned int)keyboard_handler; //get addr in boot.s
+	unsigned int offset = (unsigned int)keyboard_handler; // get addr in boot.s
 
 	IDT[0x21].offset_lowerbits = offset & 0x0000FFFF; // lower 16 bits
 	IDT[0x21].selector = KERNEL_CODE_SEGMENT_OFFSET;
@@ -226,20 +222,20 @@ char	*kstrjoin(char const *s1, char const *s2)
 
 void switch_screen(int nb)
 {
-	// ttys[tty_nb] = terminal_buffer;
-	// prompt_buffer = "";
-	if (ttys[nb])
+	ttys_row[tty_nb] = tty_row;
+	ttys_column[tty_nb] = tty_column;
+	tty_nb = nb;
+	if (ttys_row[tty_nb] != -1)
 	{
-		// terminal_buffer = ttys[nb];
-		tty_nb = nb;
-		terminal_initialize(1);
-		khello();
+		terminal_initialize(nb);
+		tty_row = ttys_row[tty_nb];
+		tty_column = ttys_column[tty_nb];
+		// kputchar('\n');
 		kprompt(0);
 	}
-	else
+	else			// tty not exist
 	{
-		tty_nb = nb;
-		terminal_initialize(1);
+		terminal_initialize(-1);
 		khello();
 		kprompt(0);
 	}
@@ -296,6 +292,8 @@ void kprompt(char c)
 	}
 	if (c == '\n' || c == 0)
 	{
+		if (c == 0)
+			kputchar('\n');
 		kcolor(VGA_COLOR_RED);
 		kputstr("[@rbourgea] \7 ");
 		tty_prompt_pos = tty_pos;
@@ -330,15 +328,17 @@ void terminal_initialize(int init)
 	tty_row = 0;
 	tty_column = 0;
 	tty_color = vga_entry_color(VGA_COLOR_LIGHT_GREY, VGA_COLOR_BLACK);
-	if (init == 1)
-		terminal_buffer = (uint16_t*) 0xB8000;
+	terminal_buffer = (uint16_t*) 0xB8000;
 	for (size_t y = 0; y < VGA_HEIGHT; y++) {
 		for (size_t x = 0; x < VGA_WIDTH; x++) {
 			const size_t index = y * VGA_WIDTH + x;
-			if (init == 1)
+			if (init == -1) {
 				terminal_buffer[index] = vga_entry(' ', tty_color);
-			else
-				vga_entry(terminal_buffer[index], tty_color);
+				ttys[tty_nb][x][y] = ' ';
+			}
+			else {
+				terminal_buffer[index] = vga_entry(ttys[tty_nb][x][y], tty_color);
+			}
 		}
 	}
 }
@@ -375,10 +375,11 @@ void kputchar(char c)
 		tty_column = 0;
 		tty_row++;
 		if (tty_row == VGA_HEIGHT)
-			terminal_initialize(1);
+			terminal_initialize(-1);
 		return;
 	}
-	terminal_putentryat(c, tty_color, tty_column, tty_row);
+	ttys[tty_nb][tty_column][tty_row] = c; // save to tty
+	terminal_putentryat(ttys[tty_nb][tty_column][tty_row], tty_color, tty_column, tty_row);
 	if (++tty_column == VGA_WIDTH) {
 		tty_column = 0;
 		if (++tty_row == VGA_HEIGHT)
@@ -545,9 +546,19 @@ void printk(char *str, ...)
 	}
 }
 
+void colrow_init(void)
+{
+	for (int i = 0; i < 10; i++)
+	{
+		ttys_column[i] = -1;
+		ttys_row[i] = -1;
+	}
+}
+
 void kmain()
 {
-	terminal_initialize(1);
+	colrow_init();
+	terminal_initialize(-1);
 	khello();
 	printk(" \11 %s, %d%c\n\n", "Hello", 42, '!');
 

@@ -6,7 +6,7 @@
 /*   By: rbourgea <rbourgea@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/06/16 16:28:32 by rbourgea          #+#    #+#             */
-/*   Updated: 2022/06/18 01:25:37 by rbourgea         ###   ########.fr       */
+/*   Updated: 2022/06/19 16:43:43 by rbourgea         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -53,7 +53,7 @@ unsigned char keyboard_map[128] = {
   // -------- 70 to 79 --------
   0, // scroll lock
   '7', // numpad 7, HOME key if preceded by keycode 224
-  '8', // numpad 8, up arrow if preceded by keycode 224
+  0, // numpad 8, up arrow if preceded by keycode 224
   '9', // numpad 9, PAGE UP key if preceded by keycode 224
   '-', // numpad hyphen
   -13, // numpad 4, left arrow if preceded by keycode 224
@@ -62,7 +62,7 @@ unsigned char keyboard_map[128] = {
   '+',
   '1', // numpad 1, END key if preceded by keycode 224
   // -------- 80 to 89 --------
-  '2', // numpad 2, down arrow if preceded by keycode 224
+  0, // numpad 2, down arrow if preceded by keycode 224
   '3', // numpad 3, PAGE DOWN key if preceded by keycode 224
   '0', // numpad 0, INSERT key if preceded by keycode 224
   '.', // numpad dot, DELETE key if preceded by keycode 224
