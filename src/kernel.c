@@ -6,7 +6,7 @@
 /*   By: rbourgea <rbourgea@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/06/16 16:29:20 by rbourgea          #+#    #+#             */
-/*   Updated: 2022/06/19 17:30:28 by rbourgea         ###   ########.fr       */
+/*   Updated: 2022/06/20 12:23:01 by rbourgea         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -104,7 +104,7 @@ char*		prompt_buffer;
 int			tty_nb = 0;
 int			tty_pos = 0;
 int			tty_prompt_pos = 0;
-char		ttys[10][80][25];
+char		ttys[10][256][256];
 size_t		ttys_row[10];
 size_t		ttys_column[10];
 
@@ -380,7 +380,7 @@ void kputchar(char c)
 		return;
 	}
 	ttys[tty_nb][tty_column][tty_row] = c; // save to tty
-	terminal_putentryat(ttys[tty_nb][tty_column][tty_row], tty_color, tty_column, tty_row);
+	terminal_putentryat(c, tty_color, tty_column, tty_row);
 	if (++tty_column == VGA_WIDTH) {
 		tty_column = 0;
 		if (++tty_row == VGA_HEIGHT)
@@ -407,10 +407,9 @@ void khello(void)
 	kputstr("       \\__|\\________|      \\__|  \\__|\\__|     \\_______/ \n\n");
 	kputstr("                                           by rbourgea \2\n");
 	kcolor(VGA_COLOR_LIGHT_MAGENTA);
-	printk(" \4 Login on ttys%d\n", tty_nb);
-	// kputstr(" \4 Login on ttys");
-	// kputchar((char)(tty_nb + '0'));
-	// kputstr("\n");
+	kputstr(" \4 Login on ttys");
+	kputchar((char)(tty_nb + '0'));
+	kputstr("\n");
 	kcolor(VGA_COLOR_WHITE);
 }
 

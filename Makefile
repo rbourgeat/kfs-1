@@ -6,7 +6,7 @@
 #    By: rbourgea <rbourgea@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/04/24 16:00:27 by rbourgea          #+#    #+#              #
-#    Updated: 2022/06/19 17:31:16 by rbourgea         ###   ########.fr        #
+#    Updated: 2022/06/20 12:20:53 by rbourgea         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -72,10 +72,9 @@ debug: build_debug
 iso: build
 	@mkdir -p build/iso/boot/grub
 	@cp grub.cfg build/iso/boot/grub
-	@cp ${KERNEL_OUT} build/iso/boot/grub
+	@cp ${KERNEL_OUT} build/iso/boot
 	@grub-mkrescue -o ${ISO_OUT} build/iso
 	@echo "$(BOLD)$(GREEN)[✓] KERNEL ISO BUILD$(RESET)"
-	@rm -rf build/iso
 
 run-iso: iso
 	@qemu-system-i386 -cdrom ${ISO_OUT}
