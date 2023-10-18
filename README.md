@@ -1,7 +1,9 @@
 ![kfs-1](/images/screen-1.png)
 
-# ✅ kfs-1 👉🏻 [kfs-2](https://github.com/rbourgeat/kfs-2)
+# kfs-1 👉🏻 [kfs-2](https://github.com/rbourgeat/kfs-2)
 Discover the world of "Kernel Programming" and learn how to create your very own Kernel from scratch.
+
+> Assembly code is in **Intel syntax** not in AT&T syntax.
 
 🎁 **Bonus:**
 - [x] Colors support to I/O interface. **(can be improve: scroll up)**
